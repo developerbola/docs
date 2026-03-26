@@ -12,7 +12,7 @@
 ### 1. Loyihani klon qilish
 
 ```bash
-git clone https://github.com/mutawirr/docs.git
+git clone https://github.com/developerbola/docs.git
 cd docs
 ```
 
@@ -21,6 +21,7 @@ cd docs
 ```bash
 cd server
 npm install
+npm run dev
 ```
 
 `server` papkasida `.env` faylini yarating va quyidagi o'zgaruvchilarni qo'shing:
@@ -36,6 +37,7 @@ JWT_SECRET=     // jwt secret yozing
 ```bash
 cd ../client
 npm install
+npm run dev
 ```
 
 `client` papkasida `.env` faylini yarating va quyidagi o'zgaruvchilarni qo'shing:
@@ -44,22 +46,22 @@ npm install
 VITE_API_URL=http://localhost:5001/api
 ```
 
-[demove videoni ko‘rish](https://drive.google.com/file/d/1yLqUF7Tr4Ee2EMbnZIDoYCSjbIXUFphH/view?usp=drive_link)
+[demo videoni ko‘rish](https://drive.google.com/file/d/1yLqUF7Tr4Ee2EMbnZIDoYCSjbIXUFphH/view?usp=drive_link)
 (ovoz bor edi yozilmay qolibdi)
 
 ## loyiha folder strukturasi
 
 ```text
-├── client/          # FRONTEND
+├── client/              # FRONTEND
 │   ├── src/
-│   │   ├── components/ # UI komponentlar
-│   │   ├── context/    # auth'ni boshqarish
-│   │   ├── pages/      # asosiy sahifalar
-│   │   └── utils/      # yordamchi funksiyalar
-├── server/          # BACKEND
-│   ├── models/      # mongoose sxemalari
-│   ├── routes/      # express API route lari
-│   ├── sockets/     # socket.io eventlari
-│   ├── middleware/  # auth va validatsiya (middleware)
-│   └── server.js    # entry point
+│   │   ├── components/  # UI komponentlar
+│   │   ├── context/     # auth'ni boshqarish
+│   │   ├── pages/       # asosiy sahifalar
+│   │   └── utils/       # yordamchi funksiyalar
+├── server/              # BACKEND
+│   ├── models/          # mongoose sxemalari
+│   ├── routes/          # express API route lari
+│   ├── sockets/         # socket.io eventlari
+│   ├── middleware/      # auth va validatsiya (middleware)
+│   └── server.js        # entry point
 ```
