@@ -12,7 +12,7 @@
 ### 1. Loyihani klon qilish
 
 ```bash
-git clone https://github.com/mutawirr/docs.git
+git clone https://github.com/developerbola/docs.git
 cd docs
 ```
 
