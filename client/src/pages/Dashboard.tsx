@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#202124]">
-      <header className="h-16 bg-[#F8F9FA] flex items-center justify-end px-6 border-b border-gray-200 sticky top-0 z-20">
+      <header className="h-16 bg-[#F8F9FA] flex items-center justify-end px-6 sticky top-0 z-20">
         <div className="flex items-center gap-2 ml-4">
           <Button variant="ghost" size="icon" onClick={logout} title="Logout">
             <LogOut className="w-5 h-5 text-gray-500" />
