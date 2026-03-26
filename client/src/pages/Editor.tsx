@@ -369,7 +369,7 @@ const Editor: React.FC = () => {
               {onlineUsers.map((u) => (
                 <div
                   key={u.socketId}
-                  className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm transition-transform hover:scale-110"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm transition-transform hover:scale-110"
                   style={{
                     backgroundColor:
                       u.userId === user?.id
