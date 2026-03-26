@@ -9,7 +9,8 @@ router.get("/", auth, async (req, res) => {
   try {
     const documents = await Document.find({
       $or: [{ owner: req.user.userId }, { collaborators: req.user.userId }],
-    }).populate("owner", "username email color");
+    }).populate("owner", "username email color")
+      .populate("collaborators", "username color");
     res.json(documents);
   } catch (err) {
     res.status(500).json({ message: "Error fetching documents" });

@@ -46,7 +46,7 @@ const Editor: React.FC = () => {
   const { documentId } = useParams<{ documentId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [title, setTitle] = useState("Untitled Document");
+  const [title, setTitle] = useState("Untitled");
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [showShare, setShowShare] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -62,7 +62,9 @@ const Editor: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<Collaborator[]>([]);
   const [cursors, setCursors] = useState<Record<string, Cursor>>({});
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
 
   const socketRef = useRef<Socket | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,8 +113,6 @@ const Editor: React.FC = () => {
       if (newContent !== editor.getHTML()) {
         const { from, to } = editor.state.selection;
 
-        // Use a chain to ensure content update and selection restoration
-        // happen in the same state update cycle.
         editor
           .chain()
           .setContent(newContent, { emitUpdate: false })
@@ -124,7 +124,6 @@ const Editor: React.FC = () => {
     socket.on("update-users", (users) => {
       setOnlineUsers(users);
 
-      // Cleanup cursors for users who are no longer online
       const onlineUserIds = users.map((u: Collaborator) => u.userId);
       setCursors((prev) => {
         const next = { ...prev };
@@ -163,7 +162,6 @@ const Editor: React.FC = () => {
   const fetchDocument = async () => {
     try {
       const response = await api.get(`/documents/${documentId}`);
-      // ALWAYS set content if the editor seems to be in its initial state or significantly different
       if (editor && (editor.isEmpty || editor.getHTML() === "<p></p>")) {
         editor.commands.setContent(response.data.content, {
           emitUpdate: false,
@@ -193,8 +191,6 @@ const Editor: React.FC = () => {
   const updateCursor = (editorInstance: any) => {
     if (!editorInstance || !user) return;
 
-    // In TipTap/ProseMirror, getting coords is slightly different
-    // For now we'll send a signal or just simplify
     const { selection } = editorInstance.state;
     const position = editorInstance.view.coordsAtPos(selection.from);
     const editorBounds = editorInstance.view.dom.getBoundingClientRect();
@@ -276,7 +272,6 @@ const Editor: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white sticky top-0 z-20 shadow-sm">
           <div className="flex items-center gap-4">
@@ -306,13 +301,17 @@ const Editor: React.FC = () => {
               {saveStatus === "saving" && (
                 <div className="flex items-center gap-2 text-gray-400">
                   <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
-                  <span className="text-[11px] font-medium tracking-tight">Saving...</span>
+                  <span className="text-[11px] font-medium tracking-tight">
+                    Saving...
+                  </span>
                 </div>
               )}
               {saveStatus === "saved" && (
                 <div className="flex items-center gap-2 text-green-600">
                   <Cloud className="w-4 h-4" />
-                  <span className="text-[11px] font-bold tracking-tight">Saved to Drive</span>
+                  <span className="text-[11px] font-bold tracking-tight">
+                    Saved to Drive
+                  </span>
                 </div>
               )}
             </div>
@@ -368,7 +367,6 @@ const Editor: React.FC = () => {
           </div>
         </header>
 
-        {/* Toolbar */}
         <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center gap-1 sticky top-16 z-10 shadow-sm overflow-x-auto">
           <Button
             variant="ghost"
@@ -442,7 +440,6 @@ const Editor: React.FC = () => {
         </main>
       </div>
 
-      {/* Right Side Panels */}
       {(showShare || showComments || showHistory) && (
         <aside className="w-96 border-l border-gray-200 bg-white flex flex-col z-30 shadow-2xl transition-transform duration-300">
           {showShare && (

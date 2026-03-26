@@ -41,24 +41,6 @@ body {
   background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
-.glass-morphism {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-
-.neo-blur {
-  background: radial-gradient(
-    circle at top left,
-    rgba(37, 99, 235, 0.05),
-    transparent 60%
-  );
-  min-height: 100vh;
-}
-
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -73,23 +55,6 @@ body {
   background: rgba(0, 0, 0, 0.2);
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
-}
-
-.float-animation {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* Utility classes needed for Tailwind v4 compat */
 .bg-background {
   background-color: var(--color-background);
 }
@@ -112,7 +77,6 @@ body {
   --tw-shadow-color: var(--color-primary);
 }
 
-/* Quill Editor Customization */
 .ql-toolbar.ql-snow {
   border: none !important;
   border-bottom: 1px solid #e5e7eb !important;
@@ -124,7 +88,7 @@ body {
 
 .ql-container.ql-snow {
   border: none !important;
-  font-family: 'Inter', sans-serif !important;
+  font-family: "Inter", sans-serif !important;
   font-size: 1.125rem !important;
 }
 
@@ -143,7 +107,6 @@ body {
   line-height: 1.8;
 }
 
-/* TipTap Editor Styles */
 .ProseMirror {
   outline: none !important;
   min-height: 800px;
@@ -161,14 +124,39 @@ body {
   margin-bottom: 1em;
 }
 
-.ProseMirror h1 { font-size: 2.25rem; font-weight: 800; margin-bottom: 0.5em; }
-.ProseMirror h2 { font-size: 1.875rem; font-weight: 700; margin-bottom: 0.5em; }
-.ProseMirror h3 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5em; }
+.ProseMirror h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  margin-bottom: 0.5em;
+}
+.ProseMirror h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 0.5em;
+}
+.ProseMirror h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+}
 
-.ProseMirror ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
-.ProseMirror ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; }
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
 
-.ProseMirror strong { font-weight: bold; }
-.ProseMirror em { font-style: italic; }
-.ProseMirror u { text-decoration: underline; }
-
+.ProseMirror strong {
+  font-weight: bold;
+}
+.ProseMirror em {
+  font-style: italic;
+}
+.ProseMirror u {
+  text-decoration: underline;
+}
