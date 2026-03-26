@@ -15,6 +15,29 @@ import {
   Copy,
   RefreshCcw,
   Cloud,
+  Undo2,
+  Redo2,
+  Bold as BoldIcon,
+  Italic as ItalicIcon,
+  Underline as UnderlineIcon,
+  Strikethrough as StrikeIcon,
+  Code as CodeIcon,
+  Type,
+  Superscript as SuperscriptIcon,
+  Subscript as SubscriptIcon,
+  Highlighter,
+  List,
+  ListOrdered,
+  CheckSquare,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Table as TableIcon,
+  Minus,
+  Maximize2,
+  Columns,
+  HelpCircle,
+  Quote,
+  Terminal,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
@@ -24,6 +47,16 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Highlight from "@tiptap/extension-highlight";
+import Superscript from "@tiptap/extension-superscript";
+import Subscript from "@tiptap/extension-subscript";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -79,6 +112,20 @@ const Editor: React.FC = () => {
         openOnClick: false,
       }),
       Underline,
+      Image,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      Highlight,
+      Superscript,
+      Subscript,
     ],
     content: "",
     onUpdate: ({ editor }) => {
@@ -273,7 +320,7 @@ const Editor: React.FC = () => {
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white sticky top-0 z-20 shadow-sm">
+        <header className="h-16 flex items-center justify-between px-6 sticky top-0 z-20">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/")}
@@ -367,40 +414,263 @@ const Editor: React.FC = () => {
           </div>
         </header>
 
-        <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center gap-1 sticky top-16 z-10 shadow-sm overflow-x-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor?.chain().focus().toggleBold().run()}
-            className={editor?.isActive("bold") ? "bg-gray-100" : ""}
-          >
-            <span className="font-bold">B</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
-            className={editor?.isActive("italic") ? "bg-gray-100" : ""}
-          >
-            <span className="italic">I</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor?.chain().focus().toggleUnderline().run()}
-            className={editor?.isActive("underline") ? "bg-gray-100" : ""}
-          >
-            <span className="underline">U</span>
-          </Button>
-          <div className="w-[1px] h-6 bg-gray-200 mx-1" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-            className={editor?.isActive("bulletList") ? "bg-gray-100" : ""}
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
+        <div className="w-full flex justify-center">
+          <div className="bg-[#f0f4f9] px-4 py-2 flex rounded-md items-center justify-center gap-0.5 sticky top-16 z-10  overflow-x-auto no-scrollbar">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().undo().run()}
+              disabled={!editor?.can().undo()}
+              className="h-8 w-8 p-0"
+              title="Undo"
+            >
+              <Undo2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().redo().run()}
+              disabled={!editor?.can().redo()}
+              className="h-8 w-8 p-0"
+              title="Redo"
+            >
+              <Redo2 className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("bold") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Bold"
+            >
+              <BoldIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("italic") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Italic"
+            >
+              <ItalicIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleUnderline().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("underline") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Underline"
+            >
+              <UnderlineIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("strike") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Strikethrough"
+            >
+              <StrikeIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleCode().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("code") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Code"
+            >
+              <CodeIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleHighlight().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("highlight") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Highlight"
+            >
+              <Highlighter className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleSuperscript().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("superscript") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Superscript"
+            >
+              <SuperscriptIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleSubscript().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("subscript") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Subscript"
+            >
+              <SubscriptIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("bulletList") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Bullet List"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("orderedList") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Ordered List"
+            >
+              <ListOrdered className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleTaskList().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("taskList") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Check List"
+            >
+              <CheckSquare className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                editor?.chain().focus().toggleHeading({ level: 1 }).run()
+              }
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("heading", { level: 1 }) ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="H1"
+            >
+              <span className="font-extrabold text-[10px]">H1</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                editor?.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("heading", { level: 2 }) ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="H2"
+            >
+              <span className="font-extrabold text-[10px]">H2</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                editor?.chain().focus().toggleHeading({ level: 3 }).run()
+              }
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("heading", { level: 3 }) ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="H3"
+            >
+              <span className="font-extrabold text-[10px]">H3</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().setParagraph().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("paragraph") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Paragraph"
+            >
+              <Type className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("blockquote") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Blockquote"
+            >
+              <Quote className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("codeBlock") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Code Block"
+            >
+              <Terminal className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const url = window.prompt("Enter link URL");
+                if (url) editor?.chain().focus().setLink({ href: url }).run();
+              }}
+              className={`h-8 w-8 p-0 transition-all ${editor?.isActive("link") ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" : "hover:bg-gray-100"}`}
+              title="Insert Link"
+            >
+              <LinkIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const url = window.prompt("Enter image URL");
+                if (url) editor?.chain().focus().setImage({ src: url }).run();
+              }}
+              className="h-8 w-8 p-0"
+              title="Insert Image"
+            >
+              <ImageIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                  .run()
+              }
+              className="h-8 w-8 p-0"
+              title="Insert Table"
+            >
+              <TableIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+              className="h-8 w-8 p-0"
+              title="Horizontal Rule"
+            >
+              <Minus className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Columns"
+              onClick={() => alert("Columns feature coming soon!")}
+            >
+              <Columns className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Fullscreen"
+              onClick={() => containerRef.current?.requestFullscreen()}
+            >
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Help"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <main
