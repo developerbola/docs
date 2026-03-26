@@ -1,24 +1,39 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Trash2, LogOut, Users, Clock, Search } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Plus,
+  FileText,
+  Trash2,
+  LogOut,
+  Users,
+  Clock,
+  Search,
+  LayoutGrid,
+  Info,
+  MoreVertical,
+  ChevronDown,
+  Star,
+  Folder,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import api from "../utils/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface Document {
   _id: string;
   title: string;
   content: string;
   updatedAt: string;
-  owner: { _id: string; username: string };
+  owner: { _id: string; username: string; color?: string };
   collaborators: string[];
 }
 
 const Dashboard: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -28,10 +43,10 @@ const Dashboard: React.FC = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await api.get('/documents');
+      const response = await api.get("/documents");
       setDocuments(response.data);
     } catch (err) {
-      console.error('Error fetching documents');
+      console.error("Error fetching documents");
     } finally {
       setLoading(false);
     }
@@ -39,140 +54,243 @@ const Dashboard: React.FC = () => {
 
   const createDocument = async () => {
     try {
-      const response = await api.post('/documents', { title: 'Untitled Document' });
+      const response = await api.post("/documents", {
+        title: "Untitled Document",
+      });
       navigate(`/document/${response.data._id}`);
     } catch (err) {
-      alert('Error creating document');
+      alert("Error creating document");
     }
   };
 
   const deleteDocument = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this document?')) return;
+    if (!confirm("Are you sure you want to delete this document?")) return;
     try {
       await api.delete(`/documents/${id}`);
-      setDocuments(documents.filter(n => n._id !== id));
+      setDocuments(documents.filter((n) => n._id !== id));
     } catch (err) {
-      alert('Cannot delete this document');
+      alert("Cannot delete this document");
     }
   };
 
-  const filteredDocuments = documents.filter(n => 
-    n.title.toLowerCase().includes(search.toLowerCase()) || 
-    n.content.toLowerCase().includes(search.toLowerCase())
+  const filteredDocuments = documents.filter(
+    (n) =>
+      n.title.toLowerCase().includes(search.toLowerCase()) ||
+      n.content.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
-    <div className="min-h-screen bg-background p-8 lg:p-12">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">My Workspace</h1>
-            <p className="text-gray-500 font-medium">Welcome back, <span className="text-primary font-bold">{user?.username}</span></p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button 
-                variant="outline"
-                onClick={logout}
-                className="gap-2"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Logout</span>
-            </Button>
-            <Button 
-                onClick={createDocument}
-                className="gap-2 font-semibold shadow-lg shadow-primary/20"
-            >
-              <Plus className="w-5 h-5" />
-              <span>New Document</span>
-            </Button>
+    <div className="min-h-screen bg-[#F8F9FA] text-[#202124]">
+      {/* Header Bar */}
+      <header className="h-16 bg-[#F8F9FA] flex items-center justify-between px-6 border-b border-gray-200 sticky top-0 z-20">
+        <div className="flex items-center gap-4 flex-1 max-w-2xl">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-gray-600 transition-colors z-10" />
+            <Input
+              type="text"
+              placeholder="Search in Drive"
+              value={search}
+              onChange={(e: any) => setSearch(e.target.value)}
+              className="pl-12 h-12 rounded-full bg-[#EAF1FB] border-none focus:bg-white focus:ring-1 focus:ring-primary shadow-none transition-all"
+            />
           </div>
         </div>
 
-        {/* Search & Stats */}
-        <div className="flex flex-col md:flex-row gap-6 mb-12">
-            <div className="relative flex-1 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors z-10" />
-                <Input 
-                    type="text"
-                    placeholder="Search documents..."
-                    value={search}
-                    onChange={(e: any) => setSearch(e.target.value)}
-                    className="pl-12 h-14 rounded-2xl bg-white shadow-sm"
-                />
-            </div>
-            <div className="flex gap-4">
-                <div className="glass-morphism rounded-2xl p-4 px-6 flex items-center gap-3">
-                    <div className="bg-primary/20 p-2 rounded-lg"><FileText className="w-5 h-5 text-primary" /></div>
-                    <div>
-                        <div className="text-sm text-gray-500">Total Documents</div>
-                        <div className="text-xl font-bold text-foreground">{documents.length}</div>
-                    </div>
-                </div>
-            </div>
+        <div className="flex items-center gap-2 ml-4">
+          <Button variant="ghost" size="icon" onClick={logout} title="Logout">
+            <LogOut className="w-5 h-5 text-gray-500" />
+          </Button>
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs uppercase cursor-pointer hover:opacity-90 transition-opacity">
+            {user?.username.substring(0, 1)}
+          </div>
         </div>
+      </header>
 
-        {/* Documents Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1,2,3].map(i => <div key={i} className="h-64 rounded-3xl bg-gray-200/50 animate-pulse" />)}
-          </div>
-        ) : filteredDocuments.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredDocuments.map((document) => (
-                <div
-                  key={document._id}
-                  onClick={() => navigate(`/document/${document._id}`)}
-                  className="glass-morphism p-6 rounded-3xl cursor-pointer group hover:border-primary/50 transition-all bg-white hover:-translate-y-1 duration-300"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="bg-gray-100 p-3 rounded-2xl group-hover:bg-primary/10 transition-colors">
-                      <FileText className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
-                    </div>
-                    {document.owner._id === user?.id && (
-                        <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => deleteDocument(document._id, e)}
-                            className="text-gray-500 hover:text-red-500 hover:bg-red-500/10"
-                        >
-                            <Trash2 className="w-5 h-5" />
-                        </Button>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-1">{document.title}</h3>
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Clock className="w-4 h-4" />
-                        {new Date(document.updatedAt).toLocaleDateString()}
-                    </div>
-                    {document.collaborators.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">
-                            <Users className="w-3 h-3" />
-                            {document.collaborators.length + 1}
-                        </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="bg-gray-100 p-8 rounded-full mb-6 text-gray-400">
-                <FileText className="w-16 h-16 opacity-30" />
-            </div>
-            <h3 className="text-2xl font-bold text-foreground mb-2">No documents yet</h3>
-            <p className="text-gray-500 mb-8 max-w-xs font-medium">Start your first collaborative document today and invite your team.</p>
-            <Button 
-                onClick={createDocument}
-                className="px-8 h-14 rounded-2xl font-semibold shadow-lg shadow-primary/20 gap-2"
+      <div className="flex">
+        {/* Navigation - Simple sidebar for Drive feel */}
+        <aside className="w-64 p-4 hidden lg:block sticky top-16 h-[calc(100vh-64px)] overflow-y-auto">
+          <Button
+            onClick={createDocument}
+            className="w-40 h-14 rounded-2xl bg-white text-[#3C4043] border border-gray-200 hover:shadow-lg transition-shadow flex items-center gap-3 justify-start px-5 mb-6 shadow-sm"
+          >
+            <Plus className="w-6 h-6 text-primary" />
+            <span className="font-medium text-sm">New</span>
+          </Button>
+
+          <nav className="space-y-1">
+            <div
+              className={cn(
+                "flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-colors bg-[#EAF1FB] text-primary font-medium",
+              )}
             >
-                <Plus className="w-5 h-5" />
-                <span>Create Your First Document</span>
-            </Button>
+              <LayoutGrid className="w-5 h-5" />
+              <span className="text-sm tracking-wide">My Drive</span>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer hover:bg-gray-100 transition-colors text-gray-700">
+              <Users className="w-5 h-5" />
+              <span className="text-sm tracking-wide">Shared with me</span>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer hover:bg-gray-100 transition-colors text-gray-700">
+              <Clock className="w-5 h-5" />
+              <span className="text-sm tracking-wide">Recent</span>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer hover:bg-gray-100 transition-colors text-gray-700">
+              <Star className="w-5 h-5" />
+              <span className="text-sm tracking-wide">Starred</span>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer hover:bg-gray-100 transition-colors text-gray-700">
+              <Trash2 className="w-5 h-5" />
+              <span className="text-sm tracking-wide">Trash</span>
+            </div>
+          </nav>
+        </aside>
+
+        {/* Main Workspace */}
+        <main className="flex-1 p-6 overflow-x-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-normal text-[#202124]">
+                Welcome to Drive
+              </h1>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="text-gray-500">
+                <Info className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
-        )}
+
+          {/* Suggested Section */}
+          <section className="mb-10">
+            <div className="flex items-center gap-2 mb-4 cursor-pointer group">
+              <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-800" />
+              <h2 className="text-base font-medium text-[#202124]">
+                Suggested files
+              </h2>
+            </div>
+
+            {loading ? (
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="min-w-[280px] h-48 rounded-xl bg-gray-200 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                {filteredDocuments.slice(0, 4).map((doc) => (
+                  <div
+                    key={doc._id}
+                    onClick={() => navigate(`/document/${doc._id}`)}
+                    className="min-w-[280px] bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-[#F1F3F4] transition-colors shadow-sm"
+                  >
+                    <div className="flex items-center gap-3 mb-10">
+                      <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-sm font-medium truncate">
+                        {doc.title}
+                      </h3>
+                    </div>
+                    <div className="text-[11px] text-gray-500 mb-2">
+                      You opened •{" "}
+                      {new Date(doc.updatedAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                      <div className="w-4 h-4 rounded-full bg-primary" />
+                      <span className="text-[10px] font-medium uppercase tracking-wider">
+                        {doc.owner.username}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* List/Grid View */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+            {/* List Header */}
+            <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-100 text-[13px] font-medium text-gray-600">
+              <div className="col-span-6 flex items-center gap-2">Name</div>
+              <div className="col-span-3">Reason suggested</div>
+              <div className="col-span-2">Location</div>
+            </div>
+
+            {loading ? (
+              <div className="space-y-4 p-6">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div
+                    key={i}
+                    className="h-6 w-full rounded bg-gray-100 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {filteredDocuments.map((doc) => (
+                  <div
+                    key={doc._id}
+                    onClick={() => navigate(`/document/${doc._id}`)}
+                    className="grid grid-cols-12 gap-4 px-6 py-3 items-center hover:bg-[#F1F3F4] cursor-pointer transition-colors group"
+                  >
+                    <div className="col-span-6 flex items-center gap-4 overflow-hidden">
+                      <div className="p-1.5 bg-blue-50 text-blue-600 rounded">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm text-gray-800 truncate font-medium">
+                        {doc.title}
+                      </span>
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {doc.collaborators.length > 0 && (
+                          <Users className="w-3.5 h-3.5 text-gray-400" />
+                        )}
+                        <Star className="w-3.5 h-3.5 text-gray-400 hover:text-yellow-500 cursor-pointer" />
+                      </div>
+                    </div>
+                    <div className="col-span-3 text-sm text-gray-500 truncate">
+                      You modified •{" "}
+                      {new Date(doc.updatedAt).toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Folder className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-700 font-medium">
+                        My Drive
+                      </span>
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteDocument(doc._id, e);
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {filteredDocuments.length === 0 && (
+                  <div className="p-12 text-center text-gray-500 italic">
+                    No files found.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );

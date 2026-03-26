@@ -18,19 +18,36 @@ module.exports = (io) => {
       console.log(`${username} joined document ${documentId}`);
     });
 
-    socket.on('send-changes', async ({ documentId, content, senderId }) => {
-      // Broadcast changes to others in the same document
+    // To handle per-character updates gracefully, we'll broadcast instantly 
+    // but debounce the database write.
+    const dbUpdateQueue = {}; // { documentId: timeout }
+
+    socket.on('send-changes', ({ documentId, content, senderId }) => {
+      // Broadcast changes to others in the same document INSTANTLY
       socket.to(documentId).emit('receive-changes', { content, senderId });
       
-      try {
-        await Document.findByIdAndUpdate(documentId, { content });
-      } catch (err) {
-        console.error('Error saving changes to DB:', err);
+      // Debounce DB save to once every 2 seconds per document
+      if (dbUpdateQueue[documentId]) {
+        clearTimeout(dbUpdateQueue[documentId]);
       }
+
+      dbUpdateQueue[documentId] = setTimeout(async () => {
+        try {
+          await Document.findByIdAndUpdate(documentId, { content });
+          io.to(documentId).emit('document-saved');
+          delete dbUpdateQueue[documentId];
+        } catch (err) {
+          console.error('Error saving changes to DB:', err);
+        }
+      }, 2000);
     });
 
     socket.on('cursor-move', ({ documentId, userId, username, color, position }) => {
       socket.to(documentId).emit('receive-cursor', { userId, username, color, position });
+    });
+
+    socket.on('send-comment', ({ documentId, comment }) => {
+      socket.to(documentId).emit('receive-comment', comment);
     });
 
     socket.on('save-version', async ({ documentId, userId, content }) => {

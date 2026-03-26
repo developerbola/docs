@@ -9,7 +9,7 @@ router.get("/", auth, async (req, res) => {
   try {
     const documents = await Document.find({
       $or: [{ owner: req.user.userId }, { collaborators: req.user.userId }],
-    }).populate("owner", "username email");
+    }).populate("owner", "username email color");
     res.json(documents);
   } catch (err) {
     res.status(500).json({ message: "Error fetching documents" });
@@ -34,7 +34,7 @@ router.post("/", auth, async (req, res) => {
 router.get("/:id", auth, async (req, res) => {
   try {
     const document = await Document.findById(req.params.id)
-      .populate("owner", "username")
+      .populate("owner", "username color")
       .populate({ path: "collaborators", select: "username email" })
       .populate({ path: "comments.author", select: "username" });
 
