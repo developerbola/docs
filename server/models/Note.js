@@ -22,11 +22,10 @@ const NoteSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Limit versions to 5 latest
-NoteSchema.pre('save', function(next) {
+NoteSchema.pre('save', function() {
   if (this.versions && this.versions.length > 5) {
     this.versions = this.versions.slice(-5);
   }
-  next();
 });
 
 module.exports = mongoose.model('Note', NoteSchema);
