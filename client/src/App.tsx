@@ -19,7 +19,7 @@ const AppRoutes = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/note/:noteId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+            <Route path="/document/:documentId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

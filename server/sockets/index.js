@@ -1,49 +1,46 @@
-const Note = require('../models/Note');
+const Document = require('../models/Document');
 
 module.exports = (io) => {
-  const usersInNotes = {}; // { noteId: { userId: username } }
+  const usersInDocuments = {}; // { documentId: { userId: { username, socketId, userColor } } }
 
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    socket.on('join-note', async ({ noteId, userId, username }) => {
-      socket.join(noteId);
+    socket.on('join-document', async ({ documentId, userId, username, userColor }) => {
+      socket.join(documentId);
       
-      if (!usersInNotes[noteId]) usersInNotes[noteId] = {};
-      usersInNotes[noteId][userId] = { username, socketId: socket.id };
+      if (!usersInDocuments[documentId]) usersInDocuments[documentId] = {};
+      usersInDocuments[documentId][userId] = { username, socketId: socket.id, userColor };
       
       // Update everyone in the room about online users
-      io.to(noteId).emit('update-users', Object.values(usersInNotes[noteId]));
+      io.to(documentId).emit('update-users', Object.values(usersInDocuments[documentId]));
       
-      console.log(`${username} joined note ${noteId}`);
+      console.log(`${username} joined document ${documentId}`);
     });
 
-    socket.on('send-changes', async ({ noteId, content, delta, senderId }) => {
-      // Broadcast changes to others in the same note
-      socket.to(noteId).emit('receive-changes', { content, delta, senderId });
+    socket.on('send-changes', async ({ documentId, content, senderId }) => {
+      // Broadcast changes to others in the same document
+      socket.to(documentId).emit('receive-changes', { content, senderId });
       
-      // Periodically (or on major events) save to DB to ensure persistence
-      // For this mini version, we'll update DB on every change (debounced on client side)
-      // or at least when we receive changes here.
       try {
-        await Note.findByIdAndUpdate(noteId, { content });
+        await Document.findByIdAndUpdate(documentId, { content });
       } catch (err) {
         console.error('Error saving changes to DB:', err);
       }
     });
 
-    socket.on('cursor-move', ({ noteId, userId, username, position }) => {
-      socket.to(noteId).emit('receive-cursor', { userId, username, position });
+    socket.on('cursor-move', ({ documentId, userId, username, color, position }) => {
+      socket.to(documentId).emit('receive-cursor', { userId, username, color, position });
     });
 
-    socket.on('save-version', async ({ noteId, userId, content }) => {
+    socket.on('save-version', async ({ documentId, userId, content }) => {
         try {
-            const note = await Note.findById(noteId);
-            if (note) {
-                note.versions.push({ content, author: userId });
-                if (note.versions.length > 5) note.versions.shift();
-                await note.save();
-                io.to(noteId).emit('version-saved', { timestamp: new Date(), author: userId });
+            const document = await Document.findById(documentId);
+            if (document) {
+                document.versions.push({ content, author: userId });
+                if (document.versions.length > 5) document.versions.shift();
+                await document.save();
+                io.to(documentId).emit('version-saved', { timestamp: new Date(), author: userId });
             }
         } catch (err) {
             console.error('Error saving version:', err);
@@ -51,14 +48,14 @@ module.exports = (io) => {
     });
 
     socket.on('disconnect', () => {
-      // Remove user from all notes they were in
-      for (const noteId in usersInNotes) {
-        for (const userId in usersInNotes[noteId]) {
-          if (usersInNotes[noteId][userId].socketId === socket.id) {
-            const username = usersInNotes[noteId][userId].username;
-            delete usersInNotes[noteId][userId];
-            io.to(noteId).emit('update-users', Object.values(usersInNotes[noteId]));
-            console.log(`${username} left note ${noteId}`);
+      // Remove user from all documents they were in
+      for (const documentId in usersInDocuments) {
+        for (const userId in usersInDocuments[documentId]) {
+          if (usersInDocuments[documentId][userId].socketId === socket.id) {
+            const username = usersInDocuments[documentId][userId].username;
+            delete usersInDocuments[documentId][userId];
+            io.to(documentId).emit('update-users', Object.values(usersInDocuments[documentId]));
+            console.log(`${username} left document ${documentId}`);
           }
         }
       }

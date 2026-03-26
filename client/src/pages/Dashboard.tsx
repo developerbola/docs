@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Trash2, LogOut, Users, Clock, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-interface Note {
+interface Document {
   _id: string;
   title: string;
   content: string;
@@ -15,48 +16,48 @@ interface Note {
 }
 
 const Dashboard: React.FC = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchNotes();
+    fetchDocuments();
   }, []);
 
-  const fetchNotes = async () => {
+  const fetchDocuments = async () => {
     try {
-      const response = await api.get('/notes');
-      setNotes(response.data);
+      const response = await api.get('/documents');
+      setDocuments(response.data);
     } catch (err) {
-      console.error('Error fetching notes');
+      console.error('Error fetching documents');
     } finally {
       setLoading(false);
     }
   };
 
-  const createNote = async () => {
+  const createDocument = async () => {
     try {
-      const response = await api.post('/notes', { title: 'Untitled Note' });
-      navigate(`/note/${response.data._id}`);
+      const response = await api.post('/documents', { title: 'Untitled Document' });
+      navigate(`/document/${response.data._id}`);
     } catch (err) {
-      alert('Error creating note');
+      alert('Error creating document');
     }
   };
 
-  const deleteNote = async (id: string, e: React.MouseEvent) => {
+  const deleteDocument = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this note?')) return;
+    if (!confirm('Are you sure you want to delete this document?')) return;
     try {
-      await api.delete(`/notes/${id}`);
-      setNotes(notes.filter(n => n._id !== id));
+      await api.delete(`/documents/${id}`);
+      setDocuments(documents.filter(n => n._id !== id));
     } catch (err) {
-      alert('Cannot delete this note');
+      alert('Cannot delete this document');
     }
   };
 
-  const filteredNotes = notes.filter(n => 
+  const filteredDocuments = documents.filter(n => 
     n.title.toLowerCase().includes(search.toLowerCase()) || 
     n.content.toLowerCase().includes(search.toLowerCase())
   );
@@ -67,116 +68,109 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">My Workspace</h1>
-            <p className="text-gray-400">Welcome back, <span className="text-primary font-medium">{user?.username}</span></p>
+            <h1 className="text-4xl font-bold text-foreground mb-2">My Workspace</h1>
+            <p className="text-gray-500 font-medium">Welcome back, <span className="text-primary font-bold">{user?.username}</span></p>
           </div>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={logout}
-              className="glass-morphism px-5 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2"
+            <Button 
+                variant="outline"
+                onClick={logout}
+                className="gap-2"
             >
               <LogOut className="w-5 h-5" />
               <span>Logout</span>
-            </button>
-            <button 
-              onClick={createNote}
-              className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/20 flex items-center gap-2 transition-all active:scale-95"
+            </Button>
+            <Button 
+                onClick={createDocument}
+                className="gap-2 font-semibold shadow-lg shadow-primary/20"
             >
               <Plus className="w-5 h-5" />
-              <span>New Note</span>
-            </button>
+              <span>New Document</span>
+            </Button>
           </div>
         </div>
 
         {/* Search & Stats */}
         <div className="flex flex-col md:flex-row gap-6 mb-12">
             <div className="relative flex-1 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors" />
-                <input 
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors z-10" />
+                <Input 
                     type="text"
-                    placeholder="Search notes..."
+                    placeholder="Search documents..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
+                    onChange={(e: any) => setSearch(e.target.value)}
+                    className="pl-12 h-14 rounded-2xl bg-white shadow-sm"
                 />
             </div>
             <div className="flex gap-4">
                 <div className="glass-morphism rounded-2xl p-4 px-6 flex items-center gap-3">
                     <div className="bg-primary/20 p-2 rounded-lg"><FileText className="w-5 h-5 text-primary" /></div>
                     <div>
-                        <div className="text-sm text-gray-400">Total Notes</div>
-                        <div className="text-xl font-bold text-white">{notes.length}</div>
+                        <div className="text-sm text-gray-500">Total Documents</div>
+                        <div className="text-xl font-bold text-foreground">{documents.length}</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {/* Notes Grid */}
+        {/* Documents Grid */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1,2,3].map(i => <div key={i} className="h-64 rounded-3xl bg-white/5 animate-pulse" />)}
+            {[1,2,3].map(i => <div key={i} className="h-64 rounded-3xl bg-gray-200/50 animate-pulse" />)}
           </div>
-        ) : filteredNotes.length > 0 ? (
+        ) : filteredDocuments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {filteredNotes.map((note) => (
-                <motion.div
-                  key={note._id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ y: -5 }}
-                  onClick={() => navigate(`/note/${note._id}`)}
-                  className="glass-morphism p-6 rounded-3xl cursor-pointer group hover:border-primary/30 transition-all"
+              {filteredDocuments.map((document) => (
+                <div
+                  key={document._id}
+                  onClick={() => navigate(`/document/${document._id}`)}
+                  className="glass-morphism p-6 rounded-3xl cursor-pointer group hover:border-primary/50 transition-all bg-white hover:-translate-y-1 duration-300"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div className="bg-white/5 p-3 rounded-2xl group-hover:bg-primary/10 transition-colors">
-                      <FileText className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
+                    <div className="bg-gray-100 p-3 rounded-2xl group-hover:bg-primary/10 transition-colors">
+                      <FileText className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
                     </div>
-                    {note.owner._id === user?.id && (
-                        <button 
-                            onClick={(e) => deleteNote(note._id, e)}
-                            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                    {document.owner._id === user?.id && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => deleteDocument(document._id, e)}
+                            className="text-gray-500 hover:text-red-500 hover:bg-red-500/10"
                         >
                             <Trash2 className="w-5 h-5" />
-                        </button>
+                        </Button>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{note.title}</h3>
-                  <p className="text-gray-400 text-sm mb-6 line-clamp-3 h-12">
-                    {note.content || 'Empty note...'}
-                  </p>
-                  <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-1">{document.title}</h3>
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                         <Clock className="w-4 h-4" />
-                        {new Date(note.updatedAt).toLocaleDateString()}
+                        {new Date(document.updatedAt).toLocaleDateString()}
                     </div>
-                    {note.collaborators.length > 0 && (
+                    {document.collaborators.length > 0 && (
                         <div className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">
                             <Users className="w-3 h-3" />
-                            {note.collaborators.length + 1}
+                            {document.collaborators.length + 1}
                         </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="bg-white/5 p-8 rounded-full mb-6 text-gray-500">
-                <FileText className="w-16 h-16 opacity-20" />
+            <div className="bg-gray-100 p-8 rounded-full mb-6 text-gray-400">
+                <FileText className="w-16 h-16 opacity-30" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">No notes yet</h3>
-            <p className="text-gray-400 mb-8 max-w-xs">Start your first collaborative document today and invite your team.</p>
-            <button 
-                onClick={createNote}
-                className="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-2xl font-semibold shadow-lg shadow-primary/20 flex items-center gap-2 transition-all"
+            <h3 className="text-2xl font-bold text-foreground mb-2">No documents yet</h3>
+            <p className="text-gray-500 mb-8 max-w-xs font-medium">Start your first collaborative document today and invite your team.</p>
+            <Button 
+                onClick={createDocument}
+                className="px-8 h-14 rounded-2xl font-semibold shadow-lg shadow-primary/20 gap-2"
             >
                 <Plus className="w-5 h-5" />
-                <span>Create Your First Note</span>
-            </button>
+                <span>Create Your First Document</span>
+            </Button>
           </div>
         )}
       </div>

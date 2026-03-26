@@ -21,13 +21,13 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/collab-notes')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/collab-documents')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/notes', require('./routes/notes'));
+app.use('/api/documents', require('./routes/documents'));
 
 // Socket.io Logic
 require('./sockets')(io);

@@ -1,47 +1,50 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
-  Users,
   MessageSquare,
-  History,
+  History as HistoryIcon,
   Share2,
   ChevronRight,
   Send,
-  User as UserIcon,
   Clock,
   Check,
   X,
-  MoreVertical,
   Plus,
   Copy,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import debounce from "lodash/debounce";
-import getCaretCoordinates from "textarea-caret";
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Collaborator {
   userId: string;
   username: string;
   socketId: string;
   email: string;
+  color?: string;
 }
 
 interface Cursor {
   userId: string;
   username: string;
+  color: string;
   position: { top: number; left: number };
 }
 
 const Editor: React.FC = () => {
-  const { noteId } = useParams<{ noteId: string }>();
-  const { user, token } = useAuth();
+  const { documentId } = useParams<{ documentId: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [content, setContent] = useState("");
-  const [title, setTitle] = useState("Untitled Note");
+  const [title, setTitle] = useState("Untitled Document");
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [showShare, setShowShare] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -59,21 +62,102 @@ const Editor: React.FC = () => {
   const [cursors, setCursors] = useState<Record<string, Cursor>>({});
 
   const socketRef = useRef<Socket | null>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchNote();
-    setupSocket();
-    return () => {
-      socketRef.current?.disconnect();
-    };
-  }, [noteId]);
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: 'Start writing your document...',
+      }),
+      Link.configure({
+        openOnClick: false,
+      }),
+      Underline,
+    ],
+    content: "",
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      console.log("Emitting changes:", html.substring(0, 20) + "...");
+      debouncedEmit(html);
+    },
+    onSelectionUpdate: ({ editor }) => {
+      updateCursor(editor);
+    },
+  });
 
-  const fetchNote = async () => {
+  useEffect(() => {
+    if (!documentId || !user || !editor) return;
+
+    fetchDocument();
+    console.log("Connecting socket for user:", user.username);
+    
+    const socket = io(
+      import.meta.env.VITE_SOCKET_URL || "http://localhost:5001",
+    );
+    socketRef.current = socket;
+
+    socket.emit("join-document", {
+      documentId,
+      userId: user.id,
+      username: user.username,
+      userColor: user.color,
+    });
+
+    socket.on("receive-changes", ({ content: newContent }) => {
+      if (newContent !== editor.getHTML()) {
+        const { from, to } = editor.state.selection;
+        const isFocused = editor.isFocused;
+
+        editor.commands.setContent(newContent, { emitUpdate: false });
+        
+        if (isFocused) {
+          const maxPos = editor.state.doc.content.size;
+          editor.commands.setTextSelection({ 
+            from: Math.min(from, maxPos), 
+            to: Math.min(to, maxPos) 
+          });
+        }
+      }
+    });
+
+    socket.on("update-users", (users) => {
+      setOnlineUsers(users);
+      
+      // Cleanup cursors for users who are no longer online
+      const onlineUserIds = users.map((u: Collaborator) => u.userId);
+      setCursors(prev => {
+        const next = { ...prev };
+        let changed = false;
+        for (const userId in next) {
+          if (!onlineUserIds.includes(userId)) {
+            delete next[userId];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+
+    socket.on("receive-cursor", (cursorData: any) => {
+      setCursors((prev) => ({
+        ...prev,
+        [cursorData.userId]: cursorData,
+      }));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [documentId, user?.id, editor]);
+
+  const fetchDocument = async () => {
     try {
-      const response = await api.get(`/notes/${noteId}`);
-      setContent(response.data.content);
+      const response = await api.get(`/documents/${documentId}`);
+      // ALWAYS set content if the editor seems to be in its initial state or significantly different
+      if (editor && (editor.isEmpty || editor.getHTML() === "<p></p>")) {
+          editor.commands.setContent(response.data.content, { emitUpdate: false });
+      }
       setTitle(response.data.title);
       setComments(response.data.comments || []);
       setHistory(response.data.versions || []);
@@ -83,61 +167,38 @@ const Editor: React.FC = () => {
     }
   };
 
-  const setupSocket = () => {
-    socketRef.current = io(
-      import.meta.env.VITE_SOCKET_URL || "http://localhost:5001",
-    );
-
-    socketRef.current.emit("join-note", {
-      noteId,
-      userId: user?.id,
-      username: user?.username,
-    });
-
-    socketRef.current.on("receive-changes", ({ content: newContent }) => {
-      setContent(newContent);
-    });
-
-    socketRef.current.on("update-users", (users) => {
-      setOnlineUsers(users);
-    });
-
-    socketRef.current.on("receive-cursor", (cursorData: any) => {
-      setCursors((prev) => ({
-        ...prev,
-        [cursorData.userId]: cursorData,
-      }));
-    });
-  };
-
   const debouncedEmit = useMemo(
     () =>
       debounce((newContent: string) => {
         socketRef.current?.emit("send-changes", {
-          noteId,
+          documentId,
           content: newContent,
           senderId: user?.id,
         });
       }, 500),
-    [noteId, user?.id],
+    [documentId, user?.id],
   );
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    debouncedEmit(newContent);
-    updateCursor();
-  };
 
-  const updateCursor = () => {
-    if (!textAreaRef.current || !user) return;
-    const { selectionEnd } = textAreaRef.current;
-    const caret = getCaretCoordinates(textAreaRef.current, selectionEnd);
+
+  const updateCursor = (editorInstance: any) => {
+    if (!editorInstance || !user) return;
+    
+    // In TipTap/ProseMirror, getting coords is slightly different
+    // For now we'll send a signal or just simplify
+    const { selection } = editorInstance.state;
+    const position = editorInstance.view.coordsAtPos(selection.from);
+    const editorBounds = editorInstance.view.dom.getBoundingClientRect();
+
     socketRef.current?.emit("cursor-move", {
-      noteId,
+      documentId,
       userId: user.id,
       username: user.username,
-      position: { top: caret.top, left: caret.left }
+      color: user.color,
+      position: { 
+        top: position.top - editorBounds.top,
+        left: position.left - editorBounds.left
+      }
     });
   };
 
@@ -147,14 +208,14 @@ const Editor: React.FC = () => {
     setShareStatus("loading");
     setShareError("");
     try {
-      await api.post(`/notes/${noteId}/share`, { identity: shareInput });
+      await api.post(`/documents/${documentId}/share`, { identity: shareInput });
       setShareStatus("success");
       setShareInput("");
-      fetchNote();
+      fetchDocument();
       setTimeout(() => setShareStatus("idle"), 3000);
     } catch (err: any) {
       setShareStatus("error");
-      setShareError(err.response?.data?.message || "Failed to share note");
+      setShareError(err.response?.data?.message || "Failed to share document");
     }
   };
 
@@ -168,7 +229,7 @@ const Editor: React.FC = () => {
     e.preventDefault();
     if (!commentInput.trim()) return;
     try {
-      const response = await api.post(`/notes/${noteId}/comment`, {
+      const response = await api.post(`/documents/${documentId}/comment`, {
         text: commentInput,
       });
       setComments([...comments, response.data]);
@@ -179,144 +240,187 @@ const Editor: React.FC = () => {
   };
 
   const saveVersion = () => {
+    if (!editor) return;
     socketRef.current?.emit("save-version", {
-      noteId,
+      documentId,
       userId: user?.id,
-      content,
+      content: editor.getHTML(),
     });
     alert("Version saved!");
-    fetchNote();
+    fetchDocument();
+  };
+
+  const handleTitleBlur = async () => {
+    try {
+      await api.patch(`/documents/${documentId}`, { title });
+    } catch (err) {
+      console.error("Failed to save title");
+    }
   };
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/20 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-6">
+        <header className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white sticky top-0 z-20 shadow-sm">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/")}
-              className="p-3 hover:bg-white/5 rounded-2xl transition-all"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-all"
             >
-              <ArrowLeft className="w-6 h-6 text-gray-400 hover:text-white" />
+              <ArrowLeft className="w-5 h-5 text-gray-500 hover:text-foreground" />
             </button>
             <div>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="bg-transparent text-xl font-bold border-none focus:outline-none focus:ring-0 text-white placeholder:text-gray-600 block w-full"
-                placeholder="Name your note..."
+                onBlur={handleTitleBlur}
+                className="bg-transparent text-lg font-bold border-none focus:outline-none focus:ring-0 text-foreground placeholder:text-gray-400 block w-full"
+                placeholder="Name your document..."
               />
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-0.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50" />
-                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
-                  Autosaved
+                <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">
+                  Editing Live
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-3 mr-4">
-              {onlineUsers.map((u, i) => (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2 mr-3 border-r border-gray-200 pr-4">
+            {onlineUsers.map((u) => (
                 <div
                   key={u.socketId}
-                  className="w-10 h-10 rounded-full border-2 border-background bg-primary/20 flex items-center justify-center text-xs font-bold ring-2 ring-primary/20"
+                  className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm transition-transform hover:scale-110"
+                  style={{ backgroundColor: u.userId === user?.id ? user.color : (u as any).userColor || '#ccc' }}
                   title={u.username}
                 >
-                  {u.username.substring(0, 2).toUpperCase()}
+                  {u.username.substring(0, 1).toUpperCase()}
                 </div>
               ))}
             </div>
 
-            <button
+            <Button
               onClick={() => setShowShare(!showShare)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-all"
+              size="sm"
+              className="flex items-center gap-2"
             >
               <Share2 className="w-4 h-4" />
               Share
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setShowComments(!showComments)}
-              className={`p-2.5 rounded-xl transition-all ${showComments ? "bg-primary/20 text-primary" : "hover:bg-white/5 text-gray-400"}`}
+              className={showComments ? "bg-primary/10 text-primary" : "text-gray-500"}
             >
               <MessageSquare className="w-5 h-5" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setShowHistory(!showHistory)}
-              className={`p-2.5 rounded-xl transition-all ${showHistory ? "bg-primary/20 text-primary" : "hover:bg-white/5 text-gray-400"}`}
+              className={showHistory ? "bg-primary/10 text-primary" : "text-gray-500"}
             >
-              <History className="w-5 h-5" />
-            </button>
+              <HistoryIcon className="w-5 h-5" />
+            </Button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-12 bg-neo-blur relative" ref={containerRef}>
-          <div className="max-w-4xl mx-auto h-full flex flex-col relative">
+        {/* Toolbar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center gap-1 sticky top-16 z-10 shadow-sm overflow-x-auto">
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                className={editor?.isActive('bold') ? 'bg-gray-100' : ''}
+            >
+                <span className="font-bold">B</span>
+            </Button>
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                className={editor?.isActive('italic') ? 'bg-gray-100' : ''}
+            >
+                <span className="italic">I</span>
+            </Button>
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                className={editor?.isActive('underline') ? 'bg-gray-100' : ''}
+            >
+                <span className="underline">U</span>
+            </Button>
+            <div className="w-[1px] h-6 bg-gray-200 mx-1" />
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                className={editor?.isActive('bulletList') ? 'bg-gray-100' : ''}
+            >
+                <Plus className="w-4 h-4" />
+            </Button>
+        </div>
+
+        <main className="flex-1 overflow-auto bg-[#F8F9FA] p-8" ref={containerRef}>
+          <div className="max-w-4xl mx-auto min-h-[11in] bg-white shadow-lg border border-gray-200 rounded-sm p-12 relative mb-20">
             {Object.values(cursors).map(cursor => {
               if (cursor.userId === user?.id) return null;
               return (
                 <div 
                   key={cursor.userId}
                   className="absolute pointer-events-none z-10 transition-all duration-100"
-                  style={{ top: cursor.position.top, left: cursor.position.left }}
+                  style={{ top: cursor.position.top + 48, left: cursor.position.left + 48 }}
                 >
-                  <div className="w-[2px] h-5 bg-green-500 animate-pulse" />
-                  <div className="absolute top-5 left-0 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap shadow-md z-20">
+                  <div className="w-[2px] h-5" style={{ backgroundColor: cursor.color }} />
+                  <div 
+                    className="absolute top-5 left-0 text-white text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap shadow-md z-20 font-bold"
+                    style={{ backgroundColor: cursor.color }}
+                  >
                     {cursor.username}
                   </div>
                 </div>
               );
             })}
-            <textarea
-              ref={textAreaRef}
-              value={content}
-              onChange={handleContentChange}
-              onKeyUp={updateCursor}
-              onClick={updateCursor}
-              placeholder="Start writing your thoughts..."
-              className="flex-1 w-full bg-transparent border-none focus:outline-none resize-none text-lg leading-relaxed text-gray-300 placeholder:text-gray-600 font-serif relative z-0"
-              autoFocus
-            />
+            <EditorContent editor={editor} className="prose prose-sm max-w-none focus:outline-none" />
           </div>
         </main>
       </div>
 
       {/* Right Side Panels */}
-      <AnimatePresence>
-        {(showShare || showComments || showHistory) && (
-          <motion.aside
-            initial={{ x: 400 }}
-            animate={{ x: 0 }}
-            exit={{ x: 400 }}
-            className="w-96 border-l border-white/5 bg-black/40 backdrop-blur-3xl flex flex-col z-30"
-          >
+      {(showShare || showComments || showHistory) && (
+        <aside className="w-96 border-l border-gray-200 bg-white flex flex-col z-30 shadow-2xl transition-transform duration-300">
             {showShare && (
               <div className="p-8 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-bold flex items-center gap-3 text-white">
+                  <h3 className="text-xl font-bold flex items-center gap-3 text-foreground">
                     <Share2 className="w-5 h-5 text-primary" />
-                    Share Note
+                    Share Document
                   </h3>
-                  <button onClick={() => setShowShare(false)}>
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowShare(false)}>
+                    <X className="w-5 h-5 text-gray-400 hover:text-foreground" />
+                  </Button>
                 </div>
                 <form onSubmit={handleShare} className="space-y-4 mb-8">
                   <div className="relative">
-                    <input
+                    <Input
                       placeholder="Email or username..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 text-white"
                       value={shareInput}
-                      onChange={(e) => setShareInput(e.target.value)}
+                      onChange={(e: any) => setShareInput(e.target.value)}
+                      className="pr-12"
                     />
-                    <button
+                    <Button
                       type="submit"
                       disabled={shareStatus === "loading"}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-primary rounded-lg text-gray-400 hover:text-white transition-all disabled:opacity-50"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-all disabled:opacity-50"
                     >
                       <Send className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                   {shareStatus === "success" && (
                     <p className="text-green-500 text-xs text-center font-bold">
@@ -335,19 +439,20 @@ const Editor: React.FC = () => {
                     Share Link
                   </h4>
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       readOnly
                       value={window.location.href}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-gray-400 focus:outline-none"
+                      className="flex-1 bg-gray-50 text-xs text-gray-500"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={handleCopyLink}
-                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-all flex items-center justify-center min-w-[48px]"
+                      variant="outline"
+                      size="icon"
                       title="Copy Link"
                     >
                       {linkCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -358,13 +463,16 @@ const Editor: React.FC = () => {
                   {collaborators.map((c) => (
                     <div
                       key={c.userId}
-                      className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5"
+                      className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-200"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold">
+                      <div 
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm"
+                        style={{ backgroundColor: c.color || '#primary' }}
+                      >
                         {c.username.substring(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-white truncate">
+                        <div className="text-sm font-bold text-foreground truncate">
                           {c.username}
                         </div>
                         <div className="text-xs text-gray-500 truncate">
@@ -385,12 +493,12 @@ const Editor: React.FC = () => {
             {showComments && (
               <div className="p-8 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-bold flex items-center gap-3 text-white">
+                  <h3 className="text-xl font-bold flex items-center gap-3 text-foreground">
                     <MessageSquare className="w-5 h-5 text-primary" />
                     Comments
                   </h3>
                   <button onClick={() => setShowComments(false)}>
-                    <X className="w-5 h-5 text-gray-500" />
+                    <X className="w-5 h-5 text-gray-400 hover:text-foreground" />
                   </button>
                 </div>
                 <div className="space-y-6 flex-1 overflow-auto mb-6 pr-2">
@@ -399,12 +507,12 @@ const Editor: React.FC = () => {
                       <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/5 flex items-center justify-center text-[10px] font-bold shrink-0">
                         {c.author.username.substring(0, 2).toUpperCase()}
                       </div>
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex-1 relative group">
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex-1 relative group">
                         <div className="flex justify-between items-start mb-1">
                           <span className="text-xs font-bold text-primary">
                             {c.author.username}
                           </span>
-                          <span className="text-[10px] text-gray-600">
+                          <span className="text-[10px] text-gray-400 font-medium">
                             <Clock className="w-3 h-3 inline mr-1" />
                             {new Date(c.timestamp).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -412,7 +520,7 @@ const Editor: React.FC = () => {
                             })}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-300 leading-relaxed">
+                        <p className="text-sm text-gray-600 leading-relaxed">
                           {c.text}
                         </p>
                       </div>
@@ -428,15 +536,19 @@ const Editor: React.FC = () => {
                   )}
                 </div>
                 <form onSubmit={addComment} className="mt-auto relative">
-                  <input
+                  <Input
                     placeholder="Add a comment..."
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 text-white"
                     value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
+                    onChange={(e: any) => setCommentInput(e.target.value)}
+                    className="pr-14 h-12"
                   />
-                  <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+                  <Button 
+                    type="submit"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 shadow-lg shadow-primary/20"
+                  >
                     <Send className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </form>
               </div>
             )}
@@ -444,17 +556,17 @@ const Editor: React.FC = () => {
             {showHistory && (
               <div className="p-8 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-bold flex items-center gap-3 text-white">
-                    <History className="w-5 h-5 text-primary" />
+                  <h3 className="text-xl font-bold flex items-center gap-3 text-foreground">
+                    <HistoryIcon className="w-5 h-5 text-primary" />
                     History
                   </h3>
-                  <button onClick={() => setShowHistory(false)}>
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowHistory(false)}>
+                    <X className="w-5 h-5 text-gray-400 hover:text-foreground" />
+                  </Button>
                 </div>
                 <button
                   onClick={saveVersion}
-                  className="w-full bg-white/5 border border-white/10 hover:border-primary/50 text-white py-4 rounded-2xl mb-8 flex items-center justify-center gap-2 group transition-all"
+                  className="w-full bg-gray-50 border border-gray-200 hover:border-primary/50 text-foreground py-4 rounded-2xl mb-8 flex items-center justify-center gap-2 group transition-all font-bold shadow-sm"
                 >
                   <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
                   <span className="font-bold text-sm">Save Snapshot</span>
@@ -464,14 +576,14 @@ const Editor: React.FC = () => {
                     .map((v, i) => (
                       <div
                         key={i}
-                        className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group"
+                        className="p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100/50 transition-all group"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="bg-primary/20 p-2.5 rounded-xl">
+                          <div className="bg-primary/10 p-2.5 rounded-xl">
                             <Clock className="w-5 h-5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-bold text-white mb-0.5">
+                            <div className="text-sm font-bold text-foreground mb-0.5">
                               {new Date(v.timestamp).toLocaleString()}
                             </div>
                             <div className="text-xs text-gray-500 italic">
@@ -493,9 +605,8 @@ const Editor: React.FC = () => {
                 </div>
               </div>
             )}
-          </motion.aside>
+          </aside>
         )}
-      </AnimatePresence>
     </div>
   );
 };

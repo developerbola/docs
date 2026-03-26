@@ -12,8 +12,8 @@ const VersionSchema = new mongoose.Schema({
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
-const NoteSchema = new mongoose.Schema({
-  title: { type: String, default: "Untitled Note" },
+const DocumentSchema = new mongoose.Schema({
+  title: { type: String, default: "Untitled Document" },
   content: { type: String, default: "" },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -22,10 +22,10 @@ const NoteSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Limit versions to 5 latest
-NoteSchema.pre('save', function() {
+DocumentSchema.pre('save', function() {
   if (this.versions && this.versions.length > 5) {
     this.versions = this.versions.slice(-5);
   }
 });
 
-module.exports = mongoose.model('Note', NoteSchema);
+module.exports = mongoose.model('Document', DocumentSchema);
