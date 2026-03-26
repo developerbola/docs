@@ -52,16 +52,16 @@ VITE_API_URL=http://localhost:5001/api
 ## loyiha folder strukturasi
 
 ```text
-├── client/          # FRONTEND
+├── client/              # FRONTEND
 │   ├── src/
-│   │   ├── components/ # UI komponentlar
-│   │   ├── context/    # auth'ni boshqarish
-│   │   ├── pages/      # asosiy sahifalar
-│   │   └── utils/      # yordamchi funksiyalar
-├── server/          # BACKEND
-│   ├── models/      # mongoose sxemalari
-│   ├── routes/      # express API route lari
-│   ├── sockets/     # socket.io eventlari
-│   ├── middleware/  # auth va validatsiya (middleware)
-│   └── server.js    # entry point
+│   │   ├── components/  # UI komponentlar
+│   │   ├── context/     # auth'ni boshqarish
+│   │   ├── pages/       # asosiy sahifalar
+│   │   └── utils/       # yordamchi funksiyalar
+├── server/              # BACKEND
+│   ├── models/          # mongoose sxemalari
+│   ├── routes/          # express API route lari
+│   ├── sockets/         # socket.io eventlari
+│   ├── middleware/      # auth va validatsiya (middleware)
+│   └── server.js        # entry point
 ```
