@@ -46,7 +46,7 @@ npm run dev
 VITE_API_URL=http://localhost:5001/api
 ```
 
-[demove videoni ko‘rish](https://drive.google.com/file/d/1yLqUF7Tr4Ee2EMbnZIDoYCSjbIXUFphH/view?usp=drive_link)
+[demo videoni ko‘rish](https://drive.google.com/file/d/1yLqUF7Tr4Ee2EMbnZIDoYCSjbIXUFphH/view?usp=drive_link)
 (ovoz bor edi yozilmay qolibdi)
 
 ## loyiha folder strukturasi
