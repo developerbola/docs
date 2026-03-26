@@ -21,6 +21,7 @@ cd docs
 ```bash
 cd server
 npm install
+npm run dev
 ```
 
 `server` papkasida `.env` faylini yarating va quyidagi o'zgaruvchilarni qo'shing:
@@ -36,6 +37,7 @@ JWT_SECRET=     // jwt secret yozing
 ```bash
 cd ../client
 npm install
+npm run dev
 ```
 
 `client` papkasida `.env` faylini yarating va quyidagi o'zgaruvchilarni qo'shing:
